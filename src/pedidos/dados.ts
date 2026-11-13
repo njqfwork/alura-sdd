@@ -23,8 +23,6 @@ export interface Pedido {
   valorTotal: number;
   criadoEm: string;
   formaPagamento: FormaPagamento;
-  canceladoEm?: string;
-  motivoCancelamento?: string;
 }
 
 const SEMENTE: Pedido[] = [
