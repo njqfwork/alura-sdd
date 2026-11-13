@@ -1,0 +1,208 @@
+# PROPOSTA de mudança no contrato (Princípio V).
+# Isto não vale como contrato: a mudança só vale quando entrar em openapi/openapi.yaml.
+# Contém apenas o que entra ou muda. O resto do openapi.yaml fica como está.
+#
+#   paths./pedidos/{id}/cancelamento      NOVO (sem x-legado: erros em Problem Details)
+#   components.schemas.Pedido             EXISTENTE, ganha canceladoEm e motivoCancelamento (opcionais)
+#   components.schemas.PedidoCancelamento NOVO
+#   components.schemas.Problema*          NOVOS
+#   components.examples.*                 NOVOS
+
+paths:
+  /pedidos/{id}/cancelamento:
+    parameters:
+      - $ref: '#/components/parameters/IdPedido'
+    post:
+      operationId: cancelarPedido
+      summary: Cancela um pedido
+      description: >-
+        Cancela um pedido com status criado ou pago. Não faz estorno.
+        Cancelar um pedido já cancelado responde 200 com o pedido como está;
+        um motivo novo é ignorado. O corpo é validado antes de o pedido ser procurado.
+      tags: [pedidos]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PedidoCancelamento'
+            examples:
+              comMotivo:
+                value:
+                  motivo: cliente desistiu
+              semMotivo:
+                value: {}
+      responses:
+        '200':
+          description: Pedido cancelado (ou que já estava cancelado).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+              examples:
+                cancelado:
+                  $ref: '#/components/examples/PedidoCancelado'
+        '400':
+          description: Corpo inválido ou motivo longo demais.
+          content:
+            application/problem+json:
+              schema:
+                # anyOf, não oneOf: todo ProblemaMotivoMuitoLongo também é um Problema válido.
+                anyOf:
+                  - $ref: '#/components/schemas/ProblemaMotivoMuitoLongo'
+                  - $ref: '#/components/schemas/Problema'
+              examples:
+                motivoMuitoLongo:
+                  value:
+                    type: https://api.techlog.example/problemas/motivo-muito-longo
+                    title: Motivo muito longo
+                    status: 400
+                    detail: O motivo pode ter até 500 caracteres; foram enviados 612.
+                    instance: /pedidos/PED-1001/cancelamento
+                    limite: 500
+                    tamanho: 612
+                jsonMalformado:
+                  value:
+                    type: https://api.techlog.example/problemas/requisicao-invalida
+                    title: Requisição inválida
+                    status: 400
+                    detail: O corpo não é um JSON válido.
+                    instance: /pedidos/PED-1001/cancelamento
+        '404':
+          description: Pedido não encontrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemaPedido'
+              examples:
+                naoEncontrado:
+                  value:
+                    type: https://api.techlog.example/problemas/pedido-nao-encontrado
+                    title: Pedido não encontrado
+                    status: 404
+                    detail: Não existe pedido com o id PED-9999.
+                    instance: /pedidos/PED-9999/cancelamento
+                    pedidoId: PED-9999
+        '409':
+          description: Pedido já enviado ou entregue; não pode ser cancelado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemaPedidoNaoCancelavel'
+              examples:
+                enviado:
+                  value:
+                    type: https://api.techlog.example/problemas/pedido-nao-cancelavel
+                    title: Pedido não pode ser cancelado
+                    status: 409
+                    detail: 'Pedidos já enviados não podem ser cancelados. Status atual: enviado.'
+                    instance: /pedidos/PED-1003/cancelamento
+                    pedidoId: PED-1003
+                    statusAtual: enviado
+        '413':
+          description: Corpo acima do limite aceito.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+        '415':
+          description: Charset ou codificação do corpo não suportados.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problema'
+
+components:
+  schemas:
+    Pedido:
+      # EXISTENTE: required e demais propriedades não mudam. Entram duas propriedades opcionais.
+      properties:
+        canceladoEm:
+          type: string
+          format: date-time
+          description: Data e hora do cancelamento. Só aparece em pedido cancelado.
+        motivoCancelamento:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Motivo informado no cancelamento. Só aparece quando houve motivo.
+
+    PedidoCancelamento:
+      type: object
+      properties:
+        motivo:
+          type: string
+          maxLength: 500
+          description: >-
+            Opcional. Aparado nas pontas; vazio depois de aparado conta como sem motivo.
+            O limite de 500 caracteres vale depois de aparar.
+
+    Problema:
+      type: object
+      description: Problem Details (RFC 9457).
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+
+    ProblemaPedido:
+      allOf:
+        - $ref: '#/components/schemas/Problema'
+        - type: object
+          required: [pedidoId]
+          properties:
+            pedidoId:
+              type: string
+
+    ProblemaPedidoNaoCancelavel:
+      allOf:
+        - $ref: '#/components/schemas/ProblemaPedido'
+        - type: object
+          required: [statusAtual]
+          properties:
+            statusAtual:
+              $ref: '#/components/schemas/StatusPedido'
+
+    ProblemaMotivoMuitoLongo:
+      allOf:
+        - $ref: '#/components/schemas/Problema'
+        - type: object
+          required: [limite, tamanho]
+          properties:
+            limite:
+              type: integer
+            tamanho:
+              type: integer
+
+  examples:
+    PedidoCancelado:
+      value:
+        id: PED-1002
+        cliente: Bruno Lima
+        status: cancelado
+        valor_total: 97.4
+        valorTotal: 97.4
+        criadoEm: '2026-09-29T08:40:00Z'
+        canceladoEm: '2026-11-05T14:22:05.123Z'
+        motivoCancelamento: cliente desistiu
+        forma_pagamento:
+          tipo: cartao
+          bandeira: visa
+          parcelas: 2
+          final_cartao: '4242'
+        itens:
+          - sku: CX-MED
+            quantidade: 1
+            preco_unitario: 59.9
+          - sku: FITA-50
+            quantidade: 3
+            preco_unitario: 12.5
