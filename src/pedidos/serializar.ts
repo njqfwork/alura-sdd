@@ -22,6 +22,7 @@ export function serializarPedido(p: Pedido) {
     cliente: p.cliente,
     status: p.status,
     valor_total: p.valorTotal,
+    valorTotal: p.valorTotal,
     criadoEm: p.criadoEm,
     forma_pagamento: pagamento(p.formaPagamento),
     itens: p.itens.map((i) => ({ sku: i.sku, quantidade: i.quantidade, preco_unitario: i.precoUnitario })),

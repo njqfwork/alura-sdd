@@ -220,6 +220,10 @@ components:
         valor_total:
           type: number
           description: Valor total em reais. Nome do legado.
+          deprecated: true
+        valorTotal:
+          type: number
+          description: Valor total em reais.
         criadoEm:
           type: string
           format: date-time
