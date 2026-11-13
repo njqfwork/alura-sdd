@@ -8,6 +8,7 @@
     "node": ">=24.18"
   },
   "scripts": {
+    "test:aceite": "tsx --test --test-reporter=spec \"tests/aceite/*.test.ts\"",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "conferir": "node scripts/conferir-ambiente.mjs",
