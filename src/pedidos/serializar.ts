@@ -25,5 +25,7 @@ export function serializarPedido(p: Pedido) {
     criadoEm: p.criadoEm,
     forma_pagamento: pagamento(p.formaPagamento),
     itens: p.itens.map((i) => ({ sku: i.sku, quantidade: i.quantidade, preco_unitario: i.precoUnitario })),
+    ...(p.canceladoEm ? { canceladoEm: p.canceladoEm } : {}),
+    ...(p.motivoCancelamento ? { motivoCancelamento: p.motivoCancelamento } : {}),
   };
 }
