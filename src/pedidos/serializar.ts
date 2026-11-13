@@ -19,7 +19,7 @@ function pagamento(forma: FormaPagamento) {
 export function serializarPedido(p: Pedido) {
   return {
     id: p.id,
-    nomeCliente: p.cliente,
+    cliente: p.cliente,
     status: p.status,
     valor_total: p.valorTotal,
     valorTotal: p.valorTotal,
