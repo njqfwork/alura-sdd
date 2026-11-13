@@ -2,7 +2,7 @@
 // Cada chamada a criarBase() devolve uma cópia nova, para que os testes
 // e as execuções não interfiram umas nas outras.
 
-export type Status = 'criado' | 'pago' | 'enviado' | 'entregue';
+export type Status = 'criado' | 'pago' | 'enviado' | 'entregue' | 'cancelado';
 
 export type FormaPagamento =
   | { tipo: 'cartao'; bandeira: string; parcelas: number; finalCartao: string }
@@ -23,6 +23,8 @@ export interface Pedido {
   valorTotal: number;
   criadoEm: string;
   formaPagamento: FormaPagamento;
+  canceladoEm?: string;
+  motivoCancelamento?: string;
 }
 
 const SEMENTE: Pedido[] = [

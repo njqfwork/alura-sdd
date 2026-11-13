@@ -1,8 +1,10 @@
 node_modules
 bin/
+src/gerado/
 .eval/
 relatorios/
 *.log
 .DS_Store
 .schemathesis/
 .claude/settings.local.json
+.specify/feature.json
