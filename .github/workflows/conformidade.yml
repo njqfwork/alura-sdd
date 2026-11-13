@@ -1,0 +1,30 @@
+# Conferência do servidor rodando contra o contrato.
+name: Conformidade
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  conformidade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v10.3.0
+
+      - run: npm ci
+
+      - name: Respostas conformes ao contrato
+        run: npm run conformidade
+
+      - name: Casos gerados, válidos e inválidos
+        run: npm run conformidade:completa
