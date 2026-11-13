@@ -6,3 +6,5 @@ relatorios/
 .DS_Store
 .schemathesis/
 .claude/settings.local.json
+dist/
+.env*

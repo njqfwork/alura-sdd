@@ -2,7 +2,7 @@
 // Cada chamada a criarBase() devolve uma cópia nova, para que os testes
 // e as execuções não interfiram umas nas outras.
 
-export type Status = 'criado' | 'pago' | 'enviado' | 'entregue';
+export type Status = 'criado' | 'pago' | 'enviado' | 'entregue' | 'cancelado';
 
 export type FormaPagamento =
   | { tipo: 'cartao'; bandeira: string; parcelas: number; finalCartao: string }
@@ -23,6 +23,13 @@ export interface Pedido {
   valorTotal: number;
   criadoEm: string;
   formaPagamento: FormaPagamento;
+  // Dados do cancelamento. Invariantes:
+  // - canceladoEm existe ⇔ status === 'cancelado' (ISO 8601, mesmo formato de criadoEm);
+  // - motivoCancelamento existe ⇒ status === 'cancelado'; quando existe, tem trim aplicado,
+  //   não é vazio e tem no máximo 500 caracteres Unicode;
+  // - depois de gravados, canceladoEm e motivoCancelamento não mudam mais.
+  canceladoEm?: string;
+  motivoCancelamento?: string;
 }
 
 const SEMENTE: Pedido[] = [
@@ -80,6 +87,10 @@ const SEMENTE: Pedido[] = [
   },
 ];
 
+export type ResultadoCancelamento =
+  | { resultado: 'cancelado' | 'ja-cancelado' | 'nao-cancelavel'; pedido: Pedido }
+  | { resultado: 'nao-encontrado' };
+
 export function criarBase() {
   const pedidos: Pedido[] = structuredClone(SEMENTE);
   let proximo = 1006;
@@ -90,6 +101,22 @@ export function criarBase() {
       const pedido = { id: `PED-${proximo++}`, ...dados };
       pedidos.push(pedido);
       return pedido;
+    },
+    // Regra do cancelamento: só pedidos criado ou pago passam a cancelado.
+    // O motivo chega já validado e normalizado pela rota (undefined = sem motivo).
+    // Síncrono de propósito: duas chamadas seguidas ficam com os dados da primeira.
+    // Não mexe no pagamento; estorno é outra feature.
+    cancelar: (id: string, motivo?: string): ResultadoCancelamento => {
+      const pedido = pedidos.find((p) => p.id === id);
+      if (!pedido) return { resultado: 'nao-encontrado' };
+      if (pedido.status === 'cancelado') return { resultado: 'ja-cancelado', pedido };
+      if (pedido.status === 'enviado' || pedido.status === 'entregue') {
+        return { resultado: 'nao-cancelavel', pedido };
+      }
+      pedido.status = 'cancelado';
+      pedido.canceladoEm = new Date().toISOString();
+      if (motivo !== undefined) pedido.motivoCancelamento = motivo;
+      return { resultado: 'cancelado', pedido };
     },
   };
 }
